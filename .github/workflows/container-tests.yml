@@ -75,7 +75,7 @@ jobs:
     steps:
       - id: get_cases
         run: |
-          if ${{ contains(github.event.comment.body, '[test]') 
+          (if ${{ contains(github.event.comment.body, '[test]') 
               || contains(github.event.comment.body, '[test-pytest]') 
               || contains(github.event.comment.body, '[test-all]') }}; then
             echo "container=true" >> "$GITHUB_OUTPUT"
@@ -90,7 +90,7 @@ jobs:
             fi
           else
             echo "container=false" >> "$GITHUB_OUTPUT"
-          fi
+          fi &&
           if ${{ contains(github.event.comment.body, '[test-openshift]') 
               || contains(github.event.comment.body, '[test-openshift-pytest]') 
               || contains(github.event.comment.body, '[test-all]') }}; then
@@ -106,7 +106,7 @@ jobs:
             fi
           else
             echo "openshift=false" >> "$GITHUB_OUTPUT"
-          fi
+          fi)
 
   container-tests:
     needs: get_test_cases
