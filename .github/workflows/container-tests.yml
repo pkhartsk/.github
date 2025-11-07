@@ -8,11 +8,6 @@ on:
         required: false
         type: string
         default: "[]"
-    secrets:
-      TF_PUBLIC_API_KEY:
-        required: true
-      TF_INTERNAL_API_KEY:
-        required: true
 
 jobs:
   check_readme:
