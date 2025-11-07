@@ -149,7 +149,7 @@ jobs:
   openshift-tests:
     name: "${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
     runs-on: ubuntu-latest
-    needs: check-imagestreams
+    needs: [get_test_cases, check-imagestreams]
     concurrency:
       group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
       cancel-in-progress: true
