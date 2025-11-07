@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       cases: ${{ steps.get_cases.outputs.cases }}
-      ocpcases: ${{ steps.get_cases.outputs.ocpcases }}
+      ocp_cases: ${{ steps.get_cases.outputs.ocp_cases }}
       container: ${{ steps.get_cases.outputs.container }}
       openshift: ${{ steps.get_cases.outputs.openshift }}
     steps:
@@ -97,18 +97,17 @@ jobs:
             echo "openshift=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test-openshift]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
-              echo "ocpcases=['openshift-pytest']" >> "$GITHUB_OUTPUT"
+              echo "ocp_cases=['openshift-pytest']" >> "$GITHUB_OUTPUT"
             elif ${{ !contains(github.event.comment.body, '[test-openshift-pytest]')
                   && !contains(github.event.comment.body, '[test-all]')}}; then
-              echo "ocpcases=['openshift-4']" >> "$GITHUB_OUTPUT"
+              echo "ocp_cases=['openshift-4']" >> "$GITHUB_OUTPUT"
             else
-              echo "ocpcases=['openshift-4','openshift-pytest']" >> "$GITHUB_OUTPUT"
-              echo "ocpcases=['openshift-4','openshift-pytest']"
+              echo "ocp_cases=['openshift-4','openshift-pytest']" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "openshift=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
 
   container-tests:
     needs: get_test_cases
@@ -159,7 +158,7 @@ jobs:
       matrix:
         version: ${{ fromJSON(inputs.openshift-versions) }}
         os_test: [ "rhel8", "rhel9", "rhel10" ]
-        test_case: ${{ fromJSON(needs.get_test_cases.outputs.ocpcases) }}
+        test_case: ${{ fromJSON(needs.get_test_cases.outputs.ocp_cases) }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
