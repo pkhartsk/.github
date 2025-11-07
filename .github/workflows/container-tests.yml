@@ -103,6 +103,7 @@ jobs:
               echo "ocp_cases=['openshift-4']" >> "$GITHUB_OUTPUT"
             else
               echo "ocp_cases=['openshift-4','openshift-pytest']" >> "$GITHUB_OUTPUT"
+              echo "ocp_cases=['openshift-4','openshift-pytest']"
             fi
           else
             echo "openshift=false" >> "$GITHUB_OUTPUT"
