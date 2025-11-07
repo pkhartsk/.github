@@ -80,9 +80,9 @@ jobs:
     steps:
       - id: get_cases
         run: |
-          if ${{ contains(github.even.comment.body, '[test]') \
-              || contains(github.even.comment.body, '[test-pytest]') \
-              || contains(github.even.comment.body, '[test-all]') }}; then
+          if ${{ contains(github.event.comment.body, '[test]') 
+              || contains(github.event.comment.body, '[test-pytest]') 
+              || contains(github.event.comment.body, '[test-all]') }}; then
             echo "container=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test]') }}; then
               echo "cases=['container-pytest']" >> "$GITHUB_OUTPUT"
@@ -94,9 +94,9 @@ jobs:
           else
             echo "container=false" >> "$GITHUB_OUTPUT"
           fi
-          if ${{ contains(github.even.comment.body, '[test-openshift]') \
-              || contains(github.even.comment.body, '[test-openshift-pytest]') \
-              || contains(github.even.comment.body, '[test-all]') }}; then
+          if ${{ contains(github.event.comment.body, '[test-openshift]') 
+              || contains(github.event.comment.body, '[test-openshift-pytest]') 
+              || contains(github.event.comment.body, '[test-all]') }}; then
             echo "openshift=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test-openshift]') }}; then
               echo "ocp_cases=['openshift-pytest']" >> "$GITHUB_OUTPUT"
