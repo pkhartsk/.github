@@ -26,7 +26,7 @@ jobs:
       || contains(github.event.comment.body, '[test-openshift-pytest]')
       || contains(github.event.comment.body, '[test-all]')
       )
-      && contains(fromJson('["OWNER", "MEMBER"]'), github.event.comment.author_association)
+      && contains(fromJSON('["OWNER", "MEMBER"]'), github.event.comment.author_association)
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
@@ -95,7 +95,7 @@ jobs:
             fi
           else
             echo "container=false" >> "$GITHUB_OUTPUT"
-          fi
+          fi &&
           if ${{ contains(github.event.comment.body, '[test-openshift]') 
               || contains(github.event.comment.body, '[test-openshift-pytest]') 
               || contains(github.event.comment.body, '[test-all]') }}; then
