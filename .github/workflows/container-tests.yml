@@ -67,8 +67,8 @@ jobs:
         os_test: [ "fedora", "rhel8", "rhel9", "rhel10", "c9s", "c10s" ]
         test_case: [ "container", "container-pytest" ]
         exclude:
-          - test_case: ${{ contains(event.comment.body, '[test]') && 'container-pytest' }}
-          - test_case: ${{ contains(event.comment.body, '[test-pytest]') && 'container-test' }}
+          - test_case: ${{ contains(github.event.comment.body, '[test]') && 'container-pytest' }}
+          - test_case: ${{ contains(github.event.comment.body, '[test-pytest]') && 'container-test' }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
