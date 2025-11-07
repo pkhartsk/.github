@@ -1,12 +1,5 @@
 on:
   workflow_call:
-    inputs:
-      config_path:
-        required: true
-        type: string
-    secrets:
-      repo_name:
-        required: false
 
 jobs:
   check_readme:
