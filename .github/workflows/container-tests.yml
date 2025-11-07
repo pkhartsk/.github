@@ -1,9 +1,13 @@
 on:
   workflow_call:
     inputs:
-      version:
+      versions:
         required: true
         type: string
+      openshift-versions:
+        required: false
+        type: string
+        default: "[]"
     secrets:
       TF_PUBLIC_API_KEY:
         required: true
@@ -12,10 +16,16 @@ on:
 
 jobs:
   check_readme:
+    name: Check README version table
     runs-on: ubuntu-latest
     if: |
       github.event.issue.pull_request
-      && (contains(github.event.comment.body, '[test]') || contains(github.event.comment.body, '[test-pytest]') || contains(github.event.comment.body, '[test-all]'))
+      && (contains(github.event.comment.body, '[test]')
+      || contains(github.event.comment.body, '[test-pytest]')
+      || contains(github.event.comment.body, '[test-openshift]')
+      || contains(github.event.comment.body, '[test-openshift-pytest]')
+      || contains(github.event.comment.body, '[test-all]')
+      )
       && contains(fromJson('["OWNER", "MEMBER"]'), github.event.comment.author_association)
     steps:
       - name: Checkout repo
@@ -64,28 +74,53 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       cases: ${{ steps.get_cases.outputs.cases }}
+      ocp_cases: ${{ steps.get_cases.outputs.ocp_cases }}
+      container: ${{ steps.get_cases.outputs.container }}
+      openshift: ${{ steps.get_cases.outputs.openshift }}
     steps:
       - id: get_cases
         run: |
-          if ${{ !contains(github.event.comment.body, '[test]') }}; then
-            echo "cases=['container-pytest']" >> "$GITHUB_OUTPUT"
-          elif ${{ !contains(github.event.comment.body, '[test-pytest]') }}; then
-            echo "cases=['container']" >> "$GITHUB_OUTPUT"
+          if ${{ contains(github.even.comment.body, '[test]')
+              || contains(github.even.comment.body, '[test-pytest]')
+              || contains(github.even.comment.body, '[test-all]') }}; then
+            echo "container=true" >> "$GITHUB_OUTPUT"
+            if ${{ !contains(github.event.comment.body, '[test]') }}; then
+              echo "cases=['container-pytest']" >> "$GITHUB_OUTPUT"
+            elif ${{ !contains(github.event.comment.body, '[test-pytest]') }}; then
+              echo "cases=['container']" >> "$GITHUB_OUTPUT"
+            else
+              echo "cases=['container','container-pytest']" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "cases=['container','container-pytest']" >> "$GITHUB_OUTPUT"
+            echo "container=false" >> "$GITHUB_OUTPUT"
+          fi
+          if ${{ contains(github.even.comment.body, '[test-openshift]')
+              || contains(github.even.comment.body, '[test-openshift-pytest]')
+              || contains(github.even.comment.body, '[test-all]') }}; then
+            echo "openshift=true" >> "$GITHUB_OUTPUT"
+            if ${{ !contains(github.event.comment.body, '[test-openshift]') }}; then
+              echo "ocp_cases=['openshift-pytest']" >> "$GITHUB_OUTPUT"
+            elif ${{ !contains(github.event.comment.body, '[test-openshift-pytest]') }}; then
+              echo "ocp_cases=['openshift-4']" >> "$GITHUB_OUTPUT"
+            else
+              echo "ocp_cases=['openshift-4','openshift-pytest']" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "openshift=false" >> "$GITHUB_OUTPUT"
           fi
 
   container-tests:
     needs: get_test_cases
-    name: "$${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
+    name: "${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
     runs-on: ubuntu-latest
+    if: needs.get_test_cases.outputs.container
     concurrency:
       group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
       cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(inputs.version) }}
+        version: ${{ fromJSON(inputs.versions) }}
         os_test: [ "fedora", "rhel8", "rhel9", "rhel10", "c9s", "c10s" ]
         test_case: ${{ fromJSON(needs.get_test_cases.outputs.cases) }}
 
@@ -97,3 +132,40 @@ jobs:
           test_case: ${{ matrix.test_case }}
           public_api_key: ${{ secrets.TF_PUBLIC_API_KEY }}
           private_api_key: ${{ secrets.TF_INTERNAL_API_KEY }}
+
+  check-imagestreams:
+    needs: get_test_cases
+    name: "Check imagestreams"
+    runs-on: ubuntu-latest
+    if: needs.get_test_cases.outputs.openshift
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: sclorg/ci-scripts/ocp-stream-generator@master
+        with:
+          ref: "refs/pull/${{ github.event.issue.number }}/head"
+
+  openshift-tests:
+    name: "${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
+    runs-on: ubuntu-latest
+    needs: check-imagestreams
+    concurrency:
+      group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(inputs.openshift-versions) }}
+        os_test: [ "rhel8", "rhel9", "rhel10" ]
+        test_case: ${{ fromJSON(needs.get_test_cass.outputs.ocp_cases) }}
+
+    steps:
+      - uses: sclorg/tfaga-wrapper@main
+        with:
+          os_test: ${{ matrix.os_test }}
+          version: ${{ matrix.version }}
+          test_case: ${{ matrix.test_case }}
+          public_api_key: ${{ secrets.TF_PUBLIC_API_KEY }}
+          private_api_key: ${{ secrets.TF_INTERNAL_API_KEY }}
+
