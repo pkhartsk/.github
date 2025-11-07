@@ -84,9 +84,11 @@ jobs:
               || contains(github.event.comment.body, '[test-pytest]') 
               || contains(github.event.comment.body, '[test-all]') }}; then
             echo "container=true" >> "$GITHUB_OUTPUT"
-            if ${{ !contains(github.event.comment.body, '[test]') }}; then
+            if ${{ !contains(github.event.comment.body, '[test]')
+                && !contains(github.event.comment.body, '[test-all]')}}; then
               echo "cases=['container-pytest']" >> "$GITHUB_OUTPUT"
-            elif ${{ !contains(github.event.comment.body, '[test-pytest]') }}; then
+            elif ${{ !contains(github.event.comment.body, '[test-pytest]')
+                && !contains(github.event.comment.body, '[test-all]')}}; then
               echo "cases=['container']" >> "$GITHUB_OUTPUT"
             else
               echo "cases=['container','container-pytest']" >> "$GITHUB_OUTPUT"
@@ -98,9 +100,11 @@ jobs:
               || contains(github.event.comment.body, '[test-openshift-pytest]') 
               || contains(github.event.comment.body, '[test-all]') }}; then
             echo "openshift=true" >> "$GITHUB_OUTPUT"
-            if ${{ !contains(github.event.comment.body, '[test-openshift]') }}; then
+            if ${{ !contains(github.event.comment.body, '[test-openshift]')
+                && !contains(github.event.comment.body, '[test-all]')}}; then
               echo "ocp_cases=['openshift-pytest']" >> "$GITHUB_OUTPUT"
-            elif ${{ !contains(github.event.comment.body, '[test-openshift-pytest]') }}; then
+            elif ${{ !contains(github.event.comment.body, '[test-openshift-pytest]')
+                && !contains(github.event.comment.body, '[test-all]')}}; then
               echo "ocp_cases=['openshift-4']" >> "$GITHUB_OUTPUT"
             else
               echo "ocp_cases=['openshift-4','openshift-pytest']" >> "$GITHUB_OUTPUT"
