@@ -77,10 +77,10 @@ jobs:
 
   container-tests:
     needs: get_test_cases
-    name: "Container tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
+    name: "$${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
     runs-on: ubuntu-latest
     concurrency:
-      group: container-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
+      group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
       cancel-in-progress: true
     strategy:
       fail-fast: false
