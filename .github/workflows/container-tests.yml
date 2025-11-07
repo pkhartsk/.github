@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.issue.pull_request
-      && (contains(github.event.comment.body, '[test]') || contains(github.event.comment.body, '[test-all]'))
+      && (contains(github.event.comment.body, '[test]') || contains(github.event.comment.body, '[test-pytest]') || contains(github.event.comment.body, '[test-all]'))
       && contains(fromJson('["OWNER", "MEMBER"]'), github.event.comment.author_association)
     steps:
       - name: Checkout repo
@@ -65,7 +65,10 @@ jobs:
       matrix:
         version: ${{ fromJSON(inputs.version) }}
         os_test: [ "fedora", "rhel8", "rhel9", "rhel10", "c9s", "c10s" ]
-        test_case: [ "container" ]
+        test_case: [ "container", "container-pytest" ]
+        exclude:
+          - test_case: ${{ contains(event.comment.body, '[test]') && 'container-pytest' }}
+          - test_case: ${{ contains(event.comment.body, '[test-pytest]') && 'container-test' }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
