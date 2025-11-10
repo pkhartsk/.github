@@ -79,9 +79,6 @@ jobs:
       cases: ${{ steps.get_cases.outputs.cases }}
       ocp_cases: ${{ steps.get_cases.outputs.ocp_cases }}
       fips_cases: ${{ steps.get_cases.outputs.fips_cases }}
-      container: ${{ steps.get_cases.outputs.container }}
-      openshift: ${{ steps.get_cases.outputs.openshift }}
-      fips: ${{ steps.get_cases.outputs.fips }}
     steps:
       - id: get_cases
         run: |
@@ -89,7 +86,6 @@ jobs:
               || contains(github.event.comment.body, '[test-pytest]') 
               || contains(github.event.comment.body, '[test-all]'))
               && contains(inputs.enabled-tests, 'container') }}; then
-            echo "container=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
               cases='["container-pytest"]'
@@ -103,14 +99,11 @@ jobs:
             # equivalent of $cases intersection with enabled-tests
             # in order to run only available tests
             jq -nc "$cases"' - ('"$cases"' - ${{ inputs.enabled-tests }})' >> "$GITHUB_OUTPUT"
-          else
-            echo "container=false" >> "$GITHUB_OUTPUT"
           fi
           if ${{ (contains(github.event.comment.body, '[test-openshift]') 
               || contains(github.event.comment.body, '[test-openshift-pytest]') 
               || contains(github.event.comment.body, '[test-all]'))
               && contains(inputs.enabled-tests, 'openshift') }}; then
-            echo "openshift=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test-openshift]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
               ocp_cases='["openshift-pytest"]'
@@ -124,23 +117,18 @@ jobs:
             # in order to run only available tests
             echo -n "ocp_cases=" >> "$GITHUB_OUTPUT"
             jq -nc "$ocp_cases"' - ('"$ocp_cases"' - ${{ inputs.enabled-tests }})' >> "$GITHUB_OUTPUT"
-          else
-            echo "openshift=false" >> "$GITHUB_OUTPUT"
           fi
           if ${{ (contains(github.event.comment.body, '[test]') 
               || contains(github.event.comment.body, '[test-all]'))
               && contains(inputs.enabled-tests, 'container-fips') }}; then
-            echo "fips=true" >> "$GITHUB_OUTPUT"
             echo "fips_cases=['container-fips']" >> "$GITHUB_OUTPUT"
-          else
-            echo "fips=false" >> "$GITHUB_OUTPUT"
           fi
 
   container-tests:
     needs: get_test_cases
     name: "${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
     runs-on: ubuntu-latest
-    if: needs.get_test_cases.outputs.container
+    if: needs.get_test_cases.outputs.cases
     concurrency:
       group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
       cancel-in-progress: true
@@ -164,7 +152,7 @@ jobs:
     needs: get_test_cases
     name: "Check imagestreams"
     runs-on: ubuntu-latest
-    if: needs.get_test_cases.outputs.openshift
+    if: needs.get_test_cases.outputs.ocp_cases
     permissions:
       contents: read
       statuses: write
@@ -201,7 +189,7 @@ jobs:
     needs: get_test_cases
     name: "${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
     runs-on: ubuntu-latest
-    if: needs.get_test_cases.outputs.fips
+    if: needs.get_test_cases.outputs.fips_cases
     concurrency:
       group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
       cancel-in-progress: true
