@@ -7,7 +7,6 @@ on:
       openshift-versions:
         required: false
         type: string
-        default: "[]"
       enabled-tests:
         required: true
         type: string
@@ -152,7 +151,7 @@ jobs:
     needs: get_test_cases
     name: "Check imagestreams"
     runs-on: ubuntu-latest
-    if: needs.get_test_cases.outputs.ocp_cases
+    if: needs.get_test_cases.outputs.ocp_cases && inputs.openshift-versions
     permissions:
       contents: read
       statuses: write
