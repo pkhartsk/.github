@@ -8,6 +8,9 @@ on:
         required: false
         type: string
         default: ${{ inputs.versions }}
+      enabled-tests:
+        required: true
+        type: string
     secrets:
       TF_PUBLIC_API_KEY:
         required: true
@@ -75,14 +78,17 @@ jobs:
     outputs:
       cases: ${{ steps.get_cases.outputs.cases }}
       ocp_cases: ${{ steps.get_cases.outputs.ocp_cases }}
+      fips_cases: ${{ steps.get_cases.outputs.fips_cases }}
       container: ${{ steps.get_cases.outputs.container }}
       openshift: ${{ steps.get_cases.outputs.openshift }}
+      fips: ${{ steps.get_cases.outputs.fips }}
     steps:
       - id: get_cases
         run: |
-          if ${{ contains(github.event.comment.body, '[test]') 
+          if ${{ (contains(github.event.comment.body, '[test]') 
               || contains(github.event.comment.body, '[test-pytest]') 
-              || contains(github.event.comment.body, '[test-all]') }}; then
+              || contains(github.event.comment.body, '[test-all]'))
+              && contains(inputs.enabled-tests, 'container') }}; then
             echo "container=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
@@ -96,9 +102,10 @@ jobs:
           else
             echo "container=false" >> "$GITHUB_OUTPUT"
           fi
-          if ${{ contains(github.event.comment.body, '[test-openshift]') 
+          if ${{ (contains(github.event.comment.body, '[test-openshift]') 
               || contains(github.event.comment.body, '[test-openshift-pytest]') 
-              || contains(github.event.comment.body, '[test-all]') }}; then
+              || contains(github.event.comment.body, '[test-all]'))
+              && contains(inputs.enabled-tests, 'openshift') }}; then
             echo "openshift=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test-openshift]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
@@ -111,6 +118,14 @@ jobs:
             fi
           else
             echo "openshift=false" >> "$GITHUB_OUTPUT"
+          fi
+          if ${{ (contains(github.event.comment.body, '[test]') 
+              || contains(github.event.comment.body, '[test-all]'))
+              && contains(inputs.enabled-tests, 'container-fips') }}; then
+            echo "fips=true" >> "$GITHUB_OUTPUT"
+            echo "fips_cases=['container-fips']" >> "$GITHUB_OUTPUT"
+          else
+            echo "fips=false" >> "$GITHUB_OUTPUT"
           fi
 
   container-tests:
@@ -126,7 +141,7 @@ jobs:
       matrix:
         version: ${{ fromJSON(inputs.versions) }}
         os_test: [ "fedora", "rhel8", "rhel9", "rhel10", "c9s", "c10s" ]
-        test_case: ${{ fromJSON(needs.get_test_cases.outputs.cases) }}
+        test_case: ${{ fromJSON(needs.get_test_cases.outputs.cases) && fromJSON(inputs.enabled-tests) }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
@@ -162,7 +177,7 @@ jobs:
       matrix:
         version: ${{ fromJSON(inputs.openshift-versions) }}
         os_test: [ "rhel8", "rhel9", "rhel10" ]
-        test_case: ${{ fromJSON(needs.get_test_cases.outputs.ocp_cases) }}
+        test_case: ${{ fromJSON(needs.get_test_cases.outputs.ocp_cases) && fromJSON(inputs.enabled-tests) }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
@@ -173,3 +188,27 @@ jobs:
           public_api_key: ${{ secrets.TF_PUBLIC_API_KEY }}
           private_api_key: ${{ secrets.TF_INTERNAL_API_KEY }}
 
+
+  fips-tests:
+    needs: get_test_cases
+    name: "${{ matrix.test_case }} tests: ${{ matrix.version }} - ${{ matrix.os_test }}"
+    runs-on: ubuntu-latest
+    if: needs.get_test_cases.outputs.fips
+    concurrency:
+      group: ${{ matrix.test_case }}-${{ github.event.issue.number }}-${{ matrix.version }}-${{ matrix.os_test }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(inputs.versions) }}
+        os_test: [ "rhel9", "rhel10" ]
+        test_case: ${{ fromJSON(needs.get_test_cases.outputs.fips_cases) }}
+
+    steps:
+      - uses: sclorg/tfaga-wrapper@main
+        with:
+          os_test: ${{ matrix.os_test }}
+          version: ${{ matrix.version }}
+          test_case: ${{ matrix.test_case }}
+          public_api_key: ${{ secrets.TF_PUBLIC_API_KEY }}
+          private_api_key: ${{ secrets.TF_INTERNAL_API_KEY }}
