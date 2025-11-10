@@ -7,7 +7,7 @@ on:
       openshift-versions:
         required: false
         type: string
-        default: "[]"
+        default: ${{ inputs.versions }}
     secrets:
       TF_PUBLIC_API_KEY:
         required: true
