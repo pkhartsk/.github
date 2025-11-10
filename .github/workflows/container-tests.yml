@@ -85,6 +85,7 @@ jobs:
     steps:
       - id: get_cases
         run: |
+          sudo apt install jq
           if ${{ (contains(github.event.comment.body, '[test]') 
               || contains(github.event.comment.body, '[test-pytest]') 
               || contains(github.event.comment.body, '[test-all]'))
@@ -92,13 +93,14 @@ jobs:
             echo "container=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
-              echo "cases=['container-pytest']" >> "$GITHUB_OUTPUT"
+              cases='["container-pytest"]'
             elif ${{ !contains(github.event.comment.body, '[test-pytest]')
                   && !contains(github.event.comment.body, '[test-all]')}}; then
-              echo "cases=['container']" >> "$GITHUB_OUTPUT"
+              cases='["container"]'
             else
-              echo "cases=['container','container-pytest']" >> "$GITHUB_OUTPUT"
+              cases='["container","container-pytest"]'
             fi
+            jq -nc "$cases"' - ('"$cases"' - ${{ inputs.enabled-tests }})'
           else
             echo "container=false" >> "$GITHUB_OUTPUT"
           fi
@@ -109,13 +111,14 @@ jobs:
             echo "openshift=true" >> "$GITHUB_OUTPUT"
             if ${{ !contains(github.event.comment.body, '[test-openshift]')
                 && !contains(github.event.comment.body, '[test-all]')}}; then
-              echo "ocp_cases=['openshift-pytest']" >> "$GITHUB_OUTPUT"
+              ocp_cases='["openshift-pytest"]'
             elif ${{ !contains(github.event.comment.body, '[test-openshift-pytest]')
                   && !contains(github.event.comment.body, '[test-all]')}}; then
-              echo "ocp_cases=['openshift-4']" >> "$GITHUB_OUTPUT"
+              ocp_cases='["openshift-4"]'
             else
-              echo "ocp_cases=['openshift-4','openshift-pytest']" >> "$GITHUB_OUTPUT"
+              ocp_cases='["openshift-4","openshift-pytest"]'
             fi
+            jq -nc "$ocp_cases"' - ('"$ocp_cases"' - ${{ inputs.enabled-tests }})'
           else
             echo "openshift=false" >> "$GITHUB_OUTPUT"
           fi
@@ -141,7 +144,7 @@ jobs:
       matrix:
         version: ${{ fromJSON(inputs.versions) }}
         os_test: [ "fedora", "rhel8", "rhel9", "rhel10", "c9s", "c10s" ]
-        test_case: ${{ fromJSON(needs.get_test_cases.outputs.cases) && fromJSON(inputs.enabled-tests) }}
+        test_case: ${{ fromJSON(needs.get_test_cases.outputs.cases) }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
@@ -177,7 +180,7 @@ jobs:
       matrix:
         version: ${{ fromJSON(inputs.openshift-versions) }}
         os_test: [ "rhel8", "rhel9", "rhel10" ]
-        test_case: ${{ fromJSON(needs.get_test_cases.outputs.ocp_cases) && fromJSON(inputs.enabled-tests) }}
+        test_case: ${{ fromJSON(needs.get_test_cases.outputs.ocp_cases) }}
 
     steps:
       - uses: sclorg/tfaga-wrapper@main
