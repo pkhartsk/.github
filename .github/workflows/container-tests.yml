@@ -85,7 +85,6 @@ jobs:
     steps:
       - id: get_cases
         run: |
-          sudo apt install jq
           if ${{ (contains(github.event.comment.body, '[test]') 
               || contains(github.event.comment.body, '[test-pytest]') 
               || contains(github.event.comment.body, '[test-all]'))
@@ -100,7 +99,10 @@ jobs:
             else
               cases='["container","container-pytest"]'
             fi
-            jq -nc "$cases"' - ('"$cases"' - ${{ inputs.enabled-tests }})'
+            echo -n "cases=" >> "$GITHUB_OUTPUT"
+            # equivalent of $cases intersection with enabled-tests
+            # in order to run only available tests
+            jq -nc "$cases"' - ('"$cases"' - ${{ inputs.enabled-tests }})' >> "$GITHUB_OUTPUT"
           else
             echo "container=false" >> "$GITHUB_OUTPUT"
           fi
@@ -118,7 +120,10 @@ jobs:
             else
               ocp_cases='["openshift-4","openshift-pytest"]'
             fi
-            jq -nc "$ocp_cases"' - ('"$ocp_cases"' - ${{ inputs.enabled-tests }})'
+            # equivalent of $ocp_cases intersection with enabled-tests
+            # in order to run only available tests
+            echo -n "ocp_cases=" >> "$GITHUB_OUTPUT"
+            jq -nc "$ocp_cases"' - ('"$ocp_cases"' - ${{ inputs.enabled-tests }})' >> "$GITHUB_OUTPUT"
           else
             echo "openshift=false" >> "$GITHUB_OUTPUT"
           fi
